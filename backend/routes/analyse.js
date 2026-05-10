@@ -52,7 +52,7 @@ Respond ONLY with this exact JSON format:
 }`
         }
       ],
-      temperature: 0.3,
+      temperature: 0.2,
     });
 
     const raw = completion.choices[0].message.content;
