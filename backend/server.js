@@ -7,7 +7,14 @@ const analyseRoute = require("./routes/analyse");
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(cors({ origin: "http://localhost:3000" }));
+app.use(cors({
+  origin: [
+    "https://ai-resume-analyser-woad.vercel.app",
+    "http://localhost:3000"
+  ],
+  methods: ["GET", "POST"],
+  credentials: true
+}));
 app.use(express.json());
 
 app.use("/api", analyseRoute);
