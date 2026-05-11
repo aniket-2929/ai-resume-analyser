@@ -1,7 +1,8 @@
 const express = require("express");
 const multer = require("multer");
 const Groq = require("groq-sdk");
-const pdfParse = require("pdf-parse");
+const pdfParseLib = require("pdf-parse");
+const pdfParse = pdfParseLib.default || pdfParseLib;
 const pool = require("../db");
 
 const router = express.Router();
