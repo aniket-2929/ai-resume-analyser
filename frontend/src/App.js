@@ -4,35 +4,66 @@ import "./App.css";
 
 const BACKEND_URL = "https://ai-resume-analyser-tg33.onrender.com";
 
+/* ── Score Ring ── */
 function ScoreRing({ score }) {
   const color = score >= 75 ? "#22c55e" : score >= 50 ? "#f59e0b" : "#ef4444";
-  const r = 54, circ = 2 * Math.PI * r;
+  const r = 52, circ = 2 * Math.PI * r;
   return (
-    <svg width="140" height="140" viewBox="0 0 140 140">
-      <circle cx="70" cy="70" r={r} fill="none" stroke="#1e293b" strokeWidth="12"/>
-      <circle cx="70" cy="70" r={r} fill="none" stroke={color} strokeWidth="12"
-        strokeDasharray={`${(score/100)*circ} ${circ}`} strokeLinecap="round"
-        transform="rotate(-90 70 70)" style={{transition:"stroke-dasharray 1.2s ease"}}/>
-      <text x="70" y="66" textAnchor="middle" fill={color}
-        style={{fontSize:28,fontWeight:800,fontFamily:"sans-serif"}}>{score}%</text>
-      <text x="70" y="84" textAnchor="middle" fill="#94a3b8"
-        style={{fontSize:11,fontFamily:"sans-serif"}}>MATCH</text>
+    <svg width="130" height="130" viewBox="0 0 130 130" aria-label={`Match score: ${score}%`}>
+      <circle cx="65" cy="65" r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="10"/>
+      <circle cx="65" cy="65" r={r} fill="none" stroke={color} strokeWidth="10"
+        strokeDasharray={`${(score / 100) * circ} ${circ}`} strokeLinecap="round"
+        transform="rotate(-90 65 65)"
+        style={{ transition: "stroke-dasharray 1.4s cubic-bezier(0.4,0,0.2,1)" }}/>
+      <text x="65" y="60" textAnchor="middle" fill={color}
+        style={{ fontSize: 26, fontWeight: 800, fontFamily: "JetBrains Mono, monospace" }}>{score}%</text>
+      <text x="65" y="78" textAnchor="middle" fill="#475569"
+        style={{ fontSize: 10, fontFamily: "JetBrains Mono, monospace", letterSpacing: 1.5 }}>MATCH</text>
     </svg>
   );
 }
 
+/* ── Skill Pill ── */
 function Pill({ text, type }) {
-  const s = type === "matched"
-    ? {background:"#052e16",border:"1px solid #16a34a",color:"#4ade80"}
-    : {background:"#2d0f0f",border:"1px solid #dc2626",color:"#f87171"};
   return (
-    <span style={{...s,display:"inline-block",margin:4,padding:"4px 12px",
-      borderRadius:999,fontSize:13,fontFamily:"monospace"}}>
-      {type === "matched" ? "✓ " : "✗ "}{text}
+    <span className={`pill ${type === "matched" ? "pill-matched" : "pill-missing"}`}>
+      {type === "matched" ? "✓" : "✗"} {text}
     </span>
   );
 }
 
+/* ── Step Indicator ── */
+function Steps({ current }) {
+  const steps = ["Upload Resume", "Job Description", "AI Analysis"];
+  return (
+    <div className="steps" role="list" aria-label="Progress steps">
+      {steps.map((label, i) => {
+        const state = i < current ? "done" : i === current ? "active" : "";
+        return (
+          <div key={i} style={{ display: "flex", alignItems: "center" }}>
+            <div className={`step ${state}`} role="listitem">
+              <div className="step-num">{i < current ? "✓" : i + 1}</div>
+              <span>{label}</span>
+            </div>
+            {i < steps.length - 1 && <div className="step-line" />}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ── Stat Card ── */
+function StatCard({ value, label, color }) {
+  return (
+    <div className="stat-card">
+      <div className="stat-value" style={{ color }}>{value}</div>
+      <div className="stat-label">{label}</div>
+    </div>
+  );
+}
+
+/* ── Main App ── */
 export default function App() {
   const [resumeFile, setResumeFile] = useState(null);
   const [resumeText, setResumeText] = useState("");
@@ -43,6 +74,7 @@ export default function App() {
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef(null);
 
+  /* ── All existing handlers preserved exactly ── */
   const handleFileChange = (file) => {
     if (file && file.type === "application/pdf") {
       setResumeFile(file);
@@ -56,11 +88,8 @@ export default function App() {
   const handleDrag = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true);
-    } else if (e.type === "dragleave") {
-      setDragActive(false);
-    }
+    if (e.type === "dragenter" || e.type === "dragover") setDragActive(true);
+    else if (e.type === "dragleave") setDragActive(false);
   };
 
   const handleDrop = (e) => {
@@ -73,8 +102,8 @@ export default function App() {
   };
 
   const handleAnalyse = async () => {
-    if (!resumeText && !resumeFile) return setError("Upload a PDF resume or paste text.");
-    if (!jobDesc.trim()) return setError("Paste a job description.");
+    if (!resumeText && !resumeFile) return setError("Upload a PDF resume or paste resume text.");
+    if (!jobDesc.trim()) return setError("Please paste a job description.");
     setError(""); setLoading(true);
     try {
       const formData = new FormData();
@@ -92,173 +121,290 @@ export default function App() {
   };
 
   const downloadReport = () => {
-    const text = `AI RESUME ANALYSIS REPORT
-Match Score: ${result.matchScore}%
-Hiring Chance: ${result.hiringChance}
-
-Summary: ${result.summary}
-
-Matched Skills: ${result.matchedSkills.join(", ")}
-Missing Skills: ${result.missingSkills.join(", ")}
-
-Strengths:
-${result.strengths.map(s => "• " + s).join("\n")}
-
-Improvements:
-${result.improvements.map(s => "• " + s).join("\n")}`;
-    const blob = new Blob([text], {type:"text/plain"});
+    const text = `AI RESUME ANALYSIS REPORT\nMatch Score: ${result.matchScore}%\nHiring Chance: ${result.hiringChance}\n\nSummary: ${result.summary}\n\nMatched Skills: ${result.matchedSkills.join(", ")}\nMissing Skills: ${result.missingSkills.join(", ")}\n\nStrengths:\n${result.strengths.map(s => "• " + s).join("\n")}\n\nImprovements:\n${result.improvements.map(s => "• " + s).join("\n")}`;
+    const blob = new Blob([text], { type: "text/plain" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
     a.download = "resume_analysis.txt";
     a.click();
   };
 
-  const chanceColor = {Low:"#ef4444",Medium:"#f59e0b",High:"#22c55e","Very High":"#06b6d4"};
+  const chanceColor = { Low: "#ef4444", Medium: "#f59e0b", High: "#22c55e", "Very High": "#06b6d4" };
+  const chanceEmoji = { Low: "⚠️", Medium: "📊", High: "✅", "Very High": "🚀" };
+  const scoreColor = result ? (result.matchScore >= 75 ? "#22c55e" : result.matchScore >= 50 ? "#f59e0b" : "#ef4444") : "#6366f1";
+
+  const currentStep = result ? 2 : (resumeFile || resumeText) ? 1 : 0;
 
   return (
     <div className="app">
-      <div className="bg-orb orb1"/><div className="bg-orb orb2"/>
-      <div className="container">
-        <div className="header">
-          <span className="badge">⚡ AI Powered</span>
-          <h1 className="title">Resume Analyser<br/>& Job Matcher</h1>
-          <p className="subtitle">Upload resume, paste job description, get instant AI insights.</p>
+      <div className="bg-mesh" aria-hidden="true" />
+
+      {/* ── Navbar ── */}
+      <nav className="navbar" role="navigation" aria-label="Main navigation">
+        <div className="navbar-inner">
+          <div className="navbar-brand">
+            <div className="navbar-logo" aria-hidden="true">🎯</div>
+            <span className="navbar-name">ResumeAI</span>
+          </div>
+          <span className="navbar-tag">AI Powered</span>
         </div>
+      </nav>
+
+      <main className="container">
+        {/* ── Hero ── */}
+        <header className="hero">
+          <div className="hero-eyebrow" aria-hidden="true">
+            <span className="hero-eyebrow-dot" />
+            ATS Resume Analyzer
+          </div>
+          <h1 className="hero-title">Match Your Resume<br />to Any Job</h1>
+          <p className="hero-subtitle">
+            Upload your resume, paste a job description, and get instant AI-powered insights to land your next role.
+          </p>
+        </header>
+
+        <Steps current={currentStep} />
 
         {!result ? (
-          <>
+          /* ── Input Form ── */
+          <div className="fade-in">
+            {/* Resume Card */}
             <div className="card">
-              <div className="card-title">📄 Your Resume</div>
-              
-              <div 
-                className={`dropzone ${dragActive ? "active" : ""} ${resumeFile ? "has-file" : ""}`}
+              <div className="card-header">
+                <div className="card-icon purple" aria-hidden="true">📄</div>
+                <div>
+                  <div className="card-title">Your Resume</div>
+                  <div className="card-subtitle">Upload PDF or paste text</div>
+                </div>
+              </div>
+
+              {/* Dropzone */}
+              <div
+                className={`dropzone${dragActive ? " active" : ""}${resumeFile ? " has-file" : ""}`}
                 onDragEnter={handleDrag}
                 onDragLeave={handleDrag}
                 onDragOver={handleDrag}
                 onDrop={handleDrop}
                 onClick={() => fileInputRef.current?.click()}
+                role="button"
+                tabIndex={0}
+                aria-label="Upload PDF resume by clicking or dragging"
+                onKeyDown={e => e.key === "Enter" && fileInputRef.current?.click()}
               >
-                <input 
+                <input
                   ref={fileInputRef}
-                  type="file" 
+                  type="file"
                   accept=".pdf"
                   onChange={e => handleFileChange(e.target.files[0])}
-                  style={{display: "none"}}
+                  style={{ display: "none" }}
+                  aria-hidden="true"
                 />
                 {resumeFile ? (
                   <div className="file-info">
-                    <span className="file-icon">📄</span>
-                    <div>
+                    <div className="file-icon-wrap" aria-hidden="true">📄</div>
+                    <div className="file-details">
                       <div className="file-name">{resumeFile.name}</div>
-                      <div className="file-size">{(resumeFile.size / 1024).toFixed(1)} KB</div>
+                      <div className="file-size">{(resumeFile.size / 1024).toFixed(1)} KB • PDF</div>
                     </div>
-                    <button 
+                    <button
                       className="remove-file"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setResumeFile(null);
-                      }}
-                    >
-                      ✕
-                    </button>
+                      onClick={e => { e.stopPropagation(); setResumeFile(null); }}
+                      aria-label="Remove uploaded file"
+                    >✕</button>
                   </div>
                 ) : (
                   <>
-                    <div className="upload-icon">📤</div>
-                    <div className="upload-text">Drop PDF here or click to browse</div>
-                    <div className="upload-hint">PDF files only • Max 5MB</div>
+                    <div className="upload-icon-wrap" aria-hidden="true">📤</div>
+                    <div className="upload-text">Drop your PDF here or click to browse</div>
+                    <div className="upload-hint">PDF only • Max 5MB</div>
                   </>
                 )}
               </div>
 
-              <div className="divider">OR PASTE RESUME TEXT</div>
-              
-              <textarea 
+              <div className="divider">or paste resume text</div>
+
+              <textarea
                 placeholder="Paste your resume text here..."
-                value={resumeText} 
-                onChange={e => {
-                  setResumeText(e.target.value);
-                  if (e.target.value.trim()) setResumeFile(null);
-                }}
+                value={resumeText}
+                onChange={e => { setResumeText(e.target.value); if (e.target.value.trim()) setResumeFile(null); }}
                 disabled={!!resumeFile}
-                style={{opacity: resumeFile ? 0.5 : 1}}
+                aria-label="Resume text input"
+                aria-disabled={!!resumeFile}
               />
             </div>
 
+            {/* Job Description Card */}
             <div className="card">
-              <div className="card-title">💼 Job Description</div>
-              <textarea placeholder="Paste the full job description here..."
-                value={jobDesc} onChange={e => setJobDesc(e.target.value)}
-                style={{minHeight:180}}/>
+              <div className="card-header">
+                <div className="card-icon cyan" aria-hidden="true">💼</div>
+                <div>
+                  <div className="card-title">Job Description</div>
+                  <div className="card-subtitle">Paste the full JD for best results</div>
+                </div>
+              </div>
+              <textarea
+                placeholder="Paste the full job description here..."
+                value={jobDesc}
+                onChange={e => setJobDesc(e.target.value)}
+                style={{ minHeight: 180 }}
+                aria-label="Job description input"
+              />
             </div>
 
-            {error && <div className="error-box">{error}</div>}
+            {error && (
+              <div className="error-box" role="alert" aria-live="polite">
+                <span className="error-icon" aria-hidden="true">⚠️</span>
+                <span>{error}</span>
+              </div>
+            )}
 
-            <button className="btn-primary" onClick={handleAnalyse} disabled={loading}>
+            <button
+              className="btn-primary"
+              onClick={handleAnalyse}
+              disabled={loading}
+              aria-busy={loading}
+              aria-label={loading ? "Analysing resume..." : "Analyse my resume"}
+            >
               {loading ? (
                 <span className="loading-state">
-                  <span className="spinner"></span>
+                  <span className="spinner" aria-hidden="true" />
                   {resumeFile ? "Parsing PDF & Analysing..." : "Analysing..."}
                 </span>
-              ) : "🔍 ANALYSE MY RESUME"}
+              ) : "🔍 Analyse My Resume"}
             </button>
-          </>
+          </div>
+
         ) : (
-          <>
+          /* ── Results ── */
+          <div className="fade-in">
+            {/* Score Hero Card */}
             <div className="card">
-              <div style={{display:"flex",alignItems:"center",gap:24,flexWrap:"wrap"}}>
-                <ScoreRing score={result.matchScore}/>
-                <div>
-                  <span className="hiring-badge" style={{
-                    color:chanceColor[result.hiringChance],
-                    border:`1px solid ${chanceColor[result.hiringChance]}`,
-                    background:chanceColor[result.hiringChance]+"18"
-                  }}>{result.hiringChance} Hiring Chance</span>
-                  <p style={{color:"#94a3b8",fontSize:14,marginTop:8,maxWidth:400,lineHeight:1.6}}>
-                    {result.summary}
-                  </p>
+              <div className="result-hero">
+                <div className="score-wrap">
+                  <ScoreRing score={result.matchScore} />
+                </div>
+                <div className="result-meta">
+                  <div
+                    className="hiring-badge"
+                    style={{
+                      color: chanceColor[result.hiringChance],
+                      border: `1px solid ${chanceColor[result.hiringChance]}40`,
+                      background: `${chanceColor[result.hiringChance]}12`,
+                    }}
+                    aria-label={`Hiring chance: ${result.hiringChance}`}
+                  >
+                    <span aria-hidden="true">{chanceEmoji[result.hiringChance]}</span>
+                    {result.hiringChance} Hiring Chance
+                  </div>
+                  <p className="result-summary">{result.summary}</p>
+
+                  {/* Score Bar */}
+                  <div className="score-bar-wrap" aria-label={`ATS match score: ${result.matchScore}%`}>
+                    <div className="score-bar-label">
+                      <span>ATS Match Score</span>
+                      <span style={{ color: scoreColor, fontWeight: 700 }}>{result.matchScore}%</span>
+                    </div>
+                    <div className="score-bar-track">
+                      <div
+                        className="score-bar-fill"
+                        style={{ width: `${result.matchScore}%`, background: scoreColor }}
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
 
+            {/* Stats Row */}
+            <div className="stats-row">
+              <StatCard
+                value={result.matchedSkills.length}
+                label="Matched Skills"
+                color="#22c55e"
+              />
+              <StatCard
+                value={result.missingSkills.length}
+                label="Missing Skills"
+                color="#ef4444"
+              />
+              <StatCard
+                value={result.strengths.length}
+                label="Strengths Found"
+                color="#6366f1"
+              />
+            </div>
+
+            {/* Skills Grid */}
             <div className="grid-2">
               <div className="card">
-                <div className="sec-label">✅ Matched Skills ({result.matchedSkills.length})</div>
-                {result.matchedSkills.map((s,i) => <Pill key={i} text={s} type="matched"/>)}
+                <div className="sec-label">
+                  <span aria-hidden="true">✅</span>
+                  Matched Skills ({result.matchedSkills.length})
+                </div>
+                {result.matchedSkills.length > 0
+                  ? result.matchedSkills.map((s, i) => <Pill key={i} text={s} type="matched" />)
+                  : <div className="empty-state">No matched skills found</div>
+                }
               </div>
+
               <div className="card">
-                <div className="sec-label">❌ Missing Skills ({result.missingSkills.length})</div>
-                {result.missingSkills.map((s,i) => <Pill key={i} text={s} type="missing"/>)}
+                <div className="sec-label">
+                  <span aria-hidden="true">❌</span>
+                  Missing Skills ({result.missingSkills.length})
+                </div>
+                {result.missingSkills.length > 0
+                  ? result.missingSkills.map((s, i) => <Pill key={i} text={s} type="missing" />)
+                  : <div className="empty-state">No missing skills — great match!</div>
+                }
               </div>
+
               <div className="card">
-                <div className="sec-label">💪 Your Strengths</div>
-                {result.strengths.map((s,i) => (
-                  <div key={i} style={{padding:"8px 0",borderBottom:"1px solid #0f172a",color:"#cbd5e1",fontSize:14}}>
-                    <span style={{color:"#22c55e",marginRight:8}}>▸</span>{s}
+                <div className="sec-label">
+                  <span aria-hidden="true">💪</span>
+                  Your Strengths
+                </div>
+                {result.strengths.map((s, i) => (
+                  <div key={i} className="list-item">
+                    <div className="list-dot green" aria-hidden="true">▸</div>
+                    <span>{s}</span>
                   </div>
                 ))}
               </div>
+
               <div className="card">
-                <div className="sec-label">🚀 How to Improve</div>
-                {result.improvements.map((s,i) => (
-                  <div key={i} style={{padding:"8px 0",borderBottom:"1px solid #0f172a",color:"#cbd5e1",fontSize:14}}>
-                    <span style={{color:"#f59e0b",marginRight:8}}>▸</span>{s}
+                <div className="sec-label">
+                  <span aria-hidden="true">🚀</span>
+                  How to Improve
+                </div>
+                {result.improvements.map((s, i) => (
+                  <div key={i} className="list-item">
+                    <div className="list-dot amber" aria-hidden="true">▸</div>
+                    <span>{s}</span>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div style={{display:"flex",gap:12,marginTop:8}}>
-              <button className="btn-primary" style={{flex:1}} onClick={downloadReport}>
+            {/* Action Row */}
+            <div className="action-row">
+              <button
+                className="btn-download"
+                onClick={downloadReport}
+                aria-label="Download analysis report as text file"
+              >
                 📥 Download Report
               </button>
-              <button className="btn-secondary" onClick={() => setResult(null)}>
+              <button
+                className="btn-secondary"
+                onClick={() => { setResult(null); setResumeFile(null); setResumeText(""); setJobDesc(""); setError(""); }}
+                aria-label="Start a new analysis"
+              >
                 ↩ New Analysis
               </button>
             </div>
-          </>
+          </div>
         )}
-      </div>
+      </main>
     </div>
   );
 }
