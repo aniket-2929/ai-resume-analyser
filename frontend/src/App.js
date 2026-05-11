@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import axios from "axios";
 import "./App.css";
 
@@ -40,9 +40,40 @@ export default function App() {
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [dragActive, setDragActive] = useState(false);
+  const fileInputRef = useRef(null);
+
+  const handleFileChange = (file) => {
+    if (file && file.type === "application/pdf") {
+      setResumeFile(file);
+      setResumeText("");
+      setError("");
+    } else {
+      setError("Please upload a PDF file only.");
+    }
+  };
+
+  const handleDrag = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFileChange(e.dataTransfer.files[0]);
+    }
+  };
 
   const handleAnalyse = async () => {
-    if (!resumeText && !resumeFile) return setError("Upload a resume or paste text.");
+    if (!resumeText && !resumeFile) return setError("Upload a PDF resume or paste text.");
     if (!jobDesc.trim()) return setError("Paste a job description.");
     setError(""); setLoading(true);
     try {
@@ -50,7 +81,9 @@ export default function App() {
       if (resumeFile) formData.append("resume", resumeFile);
       formData.append("resumeText", resumeText);
       formData.append("jobDescription", jobDesc);
-      const { data } = await axios.post(`${BACKEND_URL}/api/analyse`, formData);
+      const { data } = await axios.post(`${BACKEND_URL}/api/analyse`, formData, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
       setResult(data);
     } catch (e) {
       setError("Analysis failed: " + (e.response?.data?.error || e.message));
@@ -96,12 +129,60 @@ ${result.improvements.map(s => "• " + s).join("\n")}`;
           <>
             <div className="card">
               <div className="card-title">📄 Your Resume</div>
-              <input type="file" accept=".txt,.pdf"
-                onChange={e => setResumeFile(e.target.files[0])}
-                style={{marginBottom:12,color:"#94a3b8",width:"100%"}}/>
-              <div style={{textAlign:"center",color:"#475569",fontSize:12,margin:"8px 0",fontFamily:"monospace"}}>— OR PASTE RESUME TEXT —</div>
-              <textarea placeholder="Paste your resume text here..."
-                value={resumeText} onChange={e => setResumeText(e.target.value)}/>
+              
+              <div 
+                className={`dropzone ${dragActive ? "active" : ""} ${resumeFile ? "has-file" : ""}`}
+                onDragEnter={handleDrag}
+                onDragLeave={handleDrag}
+                onDragOver={handleDrag}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <input 
+                  ref={fileInputRef}
+                  type="file" 
+                  accept=".pdf"
+                  onChange={e => handleFileChange(e.target.files[0])}
+                  style={{display: "none"}}
+                />
+                {resumeFile ? (
+                  <div className="file-info">
+                    <span className="file-icon">📄</span>
+                    <div>
+                      <div className="file-name">{resumeFile.name}</div>
+                      <div className="file-size">{(resumeFile.size / 1024).toFixed(1)} KB</div>
+                    </div>
+                    <button 
+                      className="remove-file"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setResumeFile(null);
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="upload-icon">📤</div>
+                    <div className="upload-text">Drop PDF here or click to browse</div>
+                    <div className="upload-hint">PDF files only • Max 5MB</div>
+                  </>
+                )}
+              </div>
+
+              <div className="divider">OR PASTE RESUME TEXT</div>
+              
+              <textarea 
+                placeholder="Paste your resume text here..."
+                value={resumeText} 
+                onChange={e => {
+                  setResumeText(e.target.value);
+                  if (e.target.value.trim()) setResumeFile(null);
+                }}
+                disabled={!!resumeFile}
+                style={{opacity: resumeFile ? 0.5 : 1}}
+              />
             </div>
 
             <div className="card">
@@ -114,7 +195,12 @@ ${result.improvements.map(s => "• " + s).join("\n")}`;
             {error && <div className="error-box">{error}</div>}
 
             <button className="btn-primary" onClick={handleAnalyse} disabled={loading}>
-              {loading ? "⏳ Analysing..." : "🔍 ANALYSE MY RESUME"}
+              {loading ? (
+                <span className="loading-state">
+                  <span className="spinner"></span>
+                  {resumeFile ? "Parsing PDF & Analysing..." : "Analysing..."}
+                </span>
+              ) : "🔍 ANALYSE MY RESUME"}
             </button>
           </>
         ) : (

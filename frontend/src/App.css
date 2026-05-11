@@ -36,3 +36,83 @@ textarea::placeholder { color: #334155; }
 .hiring-badge { display: inline-block; padding: 6px 16px; border-radius: 999px; font-size: 13px; font-family: 'DM Mono', monospace; margin-bottom: 8px; }
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 @media(max-width:600px) { .grid-2 { grid-template-columns: 1fr; } }
+
+/* ── Drag & Drop Dropzone ── */
+.dropzone {
+  border: 2px dashed #1e293b;
+  border-radius: 14px;
+  padding: 32px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  background: #0a1628;
+  margin-bottom: 16px;
+  position: relative;
+}
+.dropzone:hover { border-color: #6366f1; background: rgba(99,102,241,0.05); }
+.dropzone.active { border-color: #6366f1; background: rgba(99,102,241,0.1); transform: scale(1.01); }
+.dropzone.has-file { border-color: #22c55e; border-style: solid; background: rgba(34,197,94,0.05); }
+
+.upload-icon { font-size: 36px; margin-bottom: 10px; }
+.upload-text { color: #94a3b8; font-size: 15px; margin-bottom: 6px; }
+.upload-hint { color: #334155; font-size: 12px; font-family: 'DM Mono', monospace; }
+
+.file-info {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  text-align: left;
+  justify-content: center;
+}
+.file-icon { font-size: 32px; }
+.file-name { color: #22c55e; font-size: 14px; font-weight: 500; word-break: break-all; }
+.file-size { color: #64748b; font-size: 12px; font-family: 'DM Mono', monospace; margin-top: 2px; }
+.remove-file {
+  background: rgba(239,68,68,0.15);
+  border: 1px solid rgba(239,68,68,0.3);
+  color: #f87171;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+.remove-file:hover { background: rgba(239,68,68,0.3); }
+
+.divider {
+  text-align: center;
+  color: #334155;
+  font-size: 11px;
+  font-family: 'DM Mono', monospace;
+  letter-spacing: 2px;
+  margin: 14px 0;
+  position: relative;
+}
+.divider::before, .divider::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 38%;
+  height: 1px;
+  background: #1e293b;
+}
+.divider::before { left: 0; }
+.divider::after { right: 0; }
+
+/* ── Loading Spinner ── */
+.loading-state { display: flex; align-items: center; justify-content: center; gap: 10px; }
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }

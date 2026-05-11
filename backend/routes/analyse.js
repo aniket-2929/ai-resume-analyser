@@ -1,10 +1,21 @@
 const express = require("express");
 const multer = require("multer");
 const Groq = require("groq-sdk");
+const pdfParse = require("pdf-parse");
 const pool = require("../db");
 
 const router = express.Router();
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === "application/pdf") {
+      cb(null, true);
+    } else {
+      cb(new Error("Only PDF files are allowed."), false);
+    }
+  }
+});
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 router.post("/analyse", upload.single("resume"), async (req, res) => {
@@ -13,11 +24,15 @@ router.post("/analyse", upload.single("resume"), async (req, res) => {
     const jobDescription = req.body.jobDescription;
 
     if (req.file) {
-      resumeText = req.file.buffer.toString("utf-8");
+      const parsed = await pdfParse(req.file.buffer);
+      resumeText = parsed.text;
+      if (!resumeText || resumeText.trim() === "") {
+        return res.status(400).json({ error: "Could not extract text from PDF. Try a text-based PDF or paste your resume manually." });
+      }
     }
 
     if (!resumeText || resumeText.trim() === "") {
-      return res.status(400).json({ error: "No resume content found. Please paste your resume text." });
+      return res.status(400).json({ error: "No resume content found. Please upload a PDF or paste your resume text." });
     }
     if (!jobDescription) {
       return res.status(400).json({ error: "Job description is required." });
