@@ -4,6 +4,40 @@ import "./App.css";
 
 const BACKEND_URL = "https://ai-resume-analyser-tg33.onrender.com";
 
+/* ── ATS Score Ring (smaller, for ATS section) ── */
+function AtsRing({ score }) {
+  const color = score >= 75 ? "#22c55e" : score >= 50 ? "#f59e0b" : "#ef4444";
+  const r = 40, circ = 2 * Math.PI * r;
+  return (
+    <svg width="100" height="100" viewBox="0 0 100 100" aria-label={`ATS score: ${score}%`}>
+      <circle cx="50" cy="50" r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="8"/>
+      <circle cx="50" cy="50" r={r} fill="none" stroke={color} strokeWidth="8"
+        strokeDasharray={`${(score / 100) * circ} ${circ}`} strokeLinecap="round"
+        transform="rotate(-90 50 50)"
+        style={{ transition: "stroke-dasharray 1.4s cubic-bezier(0.4,0,0.2,1)" }}/>
+      <text x="50" y="46" textAnchor="middle" fill={color}
+        style={{ fontSize: 20, fontWeight: 800, fontFamily: "JetBrains Mono, monospace" }}>{score}%</text>
+      <text x="50" y="60" textAnchor="middle" fill="#475569"
+        style={{ fontSize: 8, fontFamily: "JetBrains Mono, monospace", letterSpacing: 1 }}>ATS</text>
+    </svg>
+  );
+}
+
+/* ── ATS Breakdown Bar ── */
+function AtsBar({ label, score }) {
+  const color = score >= 75 ? "#22c55e" : score >= 50 ? "#f59e0b" : "#ef4444";
+  return (
+    <div className="ats-bar-row">
+      <div className="ats-bar-label-row">
+        <span className="ats-bar-name">{label}</span>
+        <span className="ats-bar-score" style={{ color }}>{score}%</span>
+      </div>
+      <div className="ats-bar-track">
+        <div className="ats-bar-fill" style={{ width: `${score}%`, background: color }} />
+      </div>
+    </div>
+  );
+}
 /* ── Score Ring ── */
 function ScoreRing({ score }) {
   const color = score >= 75 ? "#22c55e" : score >= 50 ? "#f59e0b" : "#ef4444";
@@ -121,7 +155,41 @@ export default function App() {
   };
 
   const downloadReport = () => {
-    const text = `AI RESUME ANALYSIS REPORT\nMatch Score: ${result.matchScore}%\nHiring Chance: ${result.hiringChance}\n\nSummary: ${result.summary}\n\nMatched Skills: ${result.matchedSkills.join(", ")}\nMissing Skills: ${result.missingSkills.join(", ")}\n\nStrengths:\n${result.strengths.map(s => "• " + s).join("\n")}\n\nImprovements:\n${result.improvements.map(s => "• " + s).join("\n")}`;
+    const ats = result.ats || {};
+    const breakdown = ats.breakdown || {};
+    const text = `AI RESUME ANALYSIS REPORT
+Match Score: ${result.matchScore}%
+Hiring Chance: ${result.hiringChance}
+
+Summary: ${result.summary}
+
+Matched Skills: ${result.matchedSkills.join(", ")}
+Missing Skills: ${result.missingSkills.join(", ")}
+
+Strengths:
+${result.strengths.map(s => "• " + s).join("\n")}
+
+Improvements:
+${result.improvements.map(s => "• " + s).join("\n")}
+
+--- ATS RESUME QUALITY SCORE ---
+ATS Score: ${ats.atsScore || "N/A"}%
+Verdict: ${ats.atsVerdict || "N/A"}
+
+Breakdown:
+${Object.entries(breakdown).map(([k, v]) => `  ${k}: ${v}%`).join("\n")}
+
+ATS Strengths:
+${(ats.atsStrengths || []).map(s => "• " + s).join("\n")}
+
+ATS Weaknesses:
+${(ats.atsWeaknesses || []).map(s => "• " + s).join("\n")}
+
+Missing Sections:
+${(ats.missingSections || []).map(s => "• " + s).join("\n")}
+
+ATS Suggestions:
+${(ats.atsSuggestions || []).map(s => "• " + s).join("\n")}`;
     const blob = new Blob([text], { type: "text/plain" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
@@ -132,7 +200,18 @@ export default function App() {
   const chanceColor = { Low: "#ef4444", Medium: "#f59e0b", High: "#22c55e", "Very High": "#06b6d4" };
   const chanceEmoji = { Low: "⚠️", Medium: "📊", High: "✅", "Very High": "🚀" };
   const scoreColor = result ? (result.matchScore >= 75 ? "#22c55e" : result.matchScore >= 50 ? "#f59e0b" : "#ef4444") : "#6366f1";
-
+  const atsVerdictColor = { Poor: "#ef4444", Average: "#f59e0b", Good: "#22c55e", Excellent: "#06b6d4" };
+  const atsVerdictEmoji = { Poor: "🚨", Average: "📊", Good: "✅", Excellent: "🌟" };
+  const atsBreakdownLabels = {
+    formatting: "Formatting",
+    sections: "Sections",
+    keywords: "Keywords",
+    readability: "Readability",
+    skills: "Skills Section",
+    experience: "Experience",
+    education: "Education",
+    structure: "Structure"
+  };
   const currentStep = result ? 2 : (resumeFile || resumeText) ? 1 : 0;
 
   return (
@@ -384,6 +463,108 @@ export default function App() {
                 ))}
               </div>
             </div>
+
+            {/* ── ATS Resume Quality Score Section ── */}
+            {result.ats && (
+              <>
+                {/* ATS Score Hero */}
+                <div className="ats-section-divider">
+                  <span className="ats-section-label">🤖 ATS Resume Quality Score</span>
+                  <span className="ats-section-sub">Independent resume quality evaluation</span>
+                </div>
+
+                <div className="card ats-hero-card">
+                  <div className="ats-hero">
+                    <div className="ats-ring-wrap">
+                      <AtsRing score={result.ats.atsScore} />
+                      <div
+                        className="ats-verdict-badge"
+                        style={{
+                          color: atsVerdictColor[result.ats.atsVerdict],
+                          border: `1px solid ${atsVerdictColor[result.ats.atsVerdict]}40`,
+                          background: `${atsVerdictColor[result.ats.atsVerdict]}12`,
+                        }}
+                      >
+                        <span aria-hidden="true">{atsVerdictEmoji[result.ats.atsVerdict]}</span>
+                        {result.ats.atsVerdict}
+                      </div>
+                    </div>
+
+                    <div className="ats-breakdown">
+                      <div className="ats-breakdown-title">Score Breakdown</div>
+                      {Object.entries(result.ats.breakdown || {}).map(([key, val]) => (
+                        <AtsBar key={key} label={atsBreakdownLabels[key] || key} score={val} />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* ATS Strengths & Weaknesses */}
+                <div className="grid-2">
+                  <div className="card">
+                    <div className="sec-label">
+                      <span aria-hidden="true">✨</span>
+                      ATS Strengths ({(result.ats.atsStrengths || []).length})
+                    </div>
+                    {(result.ats.atsStrengths || []).length > 0
+                      ? result.ats.atsStrengths.map((s, i) => (
+                          <div key={i} className="list-item">
+                            <div className="list-dot green" aria-hidden="true">▸</div>
+                            <span>{s}</span>
+                          </div>
+                        ))
+                      : <div className="empty-state">No strengths detected</div>
+                    }
+                  </div>
+
+                  <div className="card">
+                    <div className="sec-label">
+                      <span aria-hidden="true">⚠️</span>
+                      ATS Weaknesses ({(result.ats.atsWeaknesses || []).length})
+                    </div>
+                    {(result.ats.atsWeaknesses || []).length > 0
+                      ? result.ats.atsWeaknesses.map((s, i) => (
+                          <div key={i} className="list-item">
+                            <div className="list-dot red" aria-hidden="true">▸</div>
+                            <span>{s}</span>
+                          </div>
+                        ))
+                      : <div className="empty-state">No major weaknesses found!</div>
+                    }
+                  </div>
+                </div>
+
+                {/* Missing Sections + ATS Suggestions */}
+                <div className="grid-2">
+                  {(result.ats.missingSections || []).length > 0 && (
+                    <div className="card">
+                      <div className="sec-label">
+                        <span aria-hidden="true">📌</span>
+                        Missing Sections
+                      </div>
+                      {result.ats.missingSections.map((s, i) => (
+                        <span key={i} className="pill pill-missing" style={{ margin: 3 }}>
+                          ✗ {s}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="card" style={(result.ats.missingSections || []).length === 0 ? { gridColumn: "1 / -1" } : {}}>
+                    <div className="sec-label">
+                      <span aria-hidden="true">💡</span>
+                      ATS Improvement Tips
+                    </div>
+                    {(result.ats.atsSuggestions || []).map((s, i) => (
+                      <div key={i} className="list-item">
+                        <div className="list-dot amber" aria-hidden="true">▸</div>
+                        <span>{s}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
 
             {/* Action Row */}
             <div className="action-row">

@@ -821,3 +821,153 @@ textarea:disabled { opacity: 0.45; cursor: not-allowed; }
 }
 
 .card { animation: fade-in 0.35s ease forwards; }
+
+/* ══════════════════════════════════════════
+   ATS RESUME QUALITY SCORE — New Styles
+   (appended, does not affect existing styles)
+══════════════════════════════════════════ */
+
+/* ── Section Divider ── */
+.ats-section-divider {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin: 32px 0 16px;
+  text-align: center;
+  position: relative;
+}
+
+.ats-section-divider::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(99,102,241,0.3), transparent);
+  z-index: 0;
+}
+
+.ats-section-label {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.2px;
+  background: var(--bg-primary);
+  padding: 0 16px;
+  position: relative;
+  z-index: 1;
+}
+
+.ats-section-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+  background: var(--bg-primary);
+  padding: 0 12px;
+  position: relative;
+  z-index: 1;
+}
+
+/* ── ATS Hero Card ── */
+.ats-hero-card {
+  border-color: rgba(99,102,241,0.2) !important;
+  background: rgba(99,102,241,0.04) !important;
+}
+
+.ats-hero {
+  display: flex;
+  align-items: flex-start;
+  gap: 32px;
+  flex-wrap: wrap;
+}
+
+.ats-ring-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.ats-verdict-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* ── ATS Breakdown Bars ── */
+.ats-breakdown {
+  flex: 1;
+  min-width: 220px;
+}
+
+.ats-breakdown-title {
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  font-weight: 600;
+  margin-bottom: 14px;
+}
+
+.ats-bar-row {
+  margin-bottom: 10px;
+}
+
+.ats-bar-row:last-child { margin-bottom: 0; }
+
+.ats-bar-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.ats-bar-name {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.ats-bar-score {
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+}
+
+.ats-bar-track {
+  height: 5px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.ats-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 1.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── Red list dot for ATS weaknesses ── */
+.list-dot.red {
+  background: rgba(239,68,68,0.12);
+  color: var(--accent-red);
+}
+
+/* ── Responsive ATS ── */
+@media (max-width: 640px) {
+  .ats-hero { gap: 20px; }
+  .ats-breakdown { min-width: 100%; }
+  .ats-section-divider { margin: 24px 0 12px; }
+}

@@ -38,7 +38,8 @@ router.post("/analyse", upload.single("resume"), async (req, res) => {
       return res.status(400).json({ error: "Job description is required." });
     }
 
-    const completion = await groq.chat.completions.create({
+    // ── Call 1: Existing Resume vs JD Match Analysis (unchanged) ──
+    const matchCompletion = await groq.chat.completions.create({
       model: "llama-3.3-70b-versatile",
       messages: [
         {
@@ -70,9 +71,65 @@ Respond ONLY with this exact JSON format:
       temperature: 0.2,
     });
 
-    const raw = completion.choices[0].message.content;
-    const clean = raw.replace(/```json|```/g, "").trim();
-    const result = JSON.parse(clean);
+    const matchRaw = matchCompletion.choices[0].message.content;
+    const matchClean = matchRaw.replace(/```json|```/g, "").trim();
+    const matchResult = JSON.parse(matchClean);
+
+    // ── Call 2: New Independent ATS Resume Quality Score ──
+    const atsCompletion = await groq.chat.completions.create({
+      model: "llama-3.3-70b-versatile",
+      messages: [
+        {
+          role: "system",
+          content: "You are a professional ATS (Applicant Tracking System) resume quality evaluator. Always respond with valid JSON only. No markdown, no backticks, no extra text."
+        },
+        {
+          role: "user",
+          content: `Evaluate this resume for ATS quality and formatting. This is INDEPENDENT of any job description — evaluate the resume itself.
+
+RESUME:
+${resumeText}
+
+Score the resume on these 8 criteria (each 0-100):
+1. formatting: Is it clean, consistent, ATS-parseable? No tables/columns/graphics?
+2. sections: Are key sections present? (Contact, Summary, Experience, Education, Skills)
+3. keywords: Does it use strong industry keywords and action verbs?
+4. readability: Is it concise, clear, well-structured?
+5. skills: Is there a dedicated skills section with relevant technical/soft skills?
+6. experience: Are experience entries detailed with achievements and metrics?
+7. education: Is education section present and properly formatted?
+8. structure: Is the overall resume structure logical and professional?
+
+Respond ONLY with this exact JSON format:
+{
+  "atsScore": <overall weighted score 0-100>,
+  "breakdown": {
+    "formatting": <0-100>,
+    "sections": <0-100>,
+    "keywords": <0-100>,
+    "readability": <0-100>,
+    "skills": <0-100>,
+    "experience": <0-100>,
+    "education": <0-100>,
+    "structure": <0-100>
+  },
+  "atsSuggestions": ["suggestion1", "suggestion2", "suggestion3", "suggestion4"],
+  "missingSections": ["section1", "section2"],
+  "atsWeaknesses": ["weakness1", "weakness2", "weakness3"],
+  "atsStrengths": ["strength1", "strength2"],
+  "atsVerdict": "Poor or Average or Good or Excellent"
+}`
+        }
+      ],
+      temperature: 0.2,
+    });
+
+    const atsRaw = atsCompletion.choices[0].message.content;
+    const atsClean = atsRaw.replace(/```json|```/g, "").trim();
+    const atsResult = JSON.parse(atsClean);
+
+    // ── Merge both results into single response ──
+    const result = { ...matchResult, ats: atsResult };
 
     await pool.query(
       `INSERT INTO analyses (resume_text, job_description, result) VALUES ($1, $2, $3)`,
